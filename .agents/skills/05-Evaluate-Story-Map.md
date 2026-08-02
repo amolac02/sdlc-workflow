@@ -13,7 +13,7 @@ For any generated Story Map, execute a review against the following four gates. 
 * **Check:** Every `US-ID` must map to a valid `IT-REQ`.
 * **Check:** The persona driving the story must be universal (e.g., `System Consumer`, `Data Provider`).
 * **Check:** Ensure there is a UML Activity Diagram (represented as Mermaid flowchart `graph LR` syntax) chronologically mapping the backbone activities.
-* **Fail Condition:** Stories lacking an `IT-REQ` parent, stories mentioning legacy segments (e.g., AssetLink), or a missing/invalid Mermaid backbone flow diagram.
+* **Fail Condition:** Stories lacking an `IT-REQ` parent, stories mentioning legacy segments (e.g., reportgenerator), or a missing/invalid Mermaid backbone flow diagram.
 * **Action:** Delete orphaned stories (scope creep). Rewrite persona actors to remain strictly product-agnostic. Generate or correct the Mermaid backbone flow diagram.
 
 ### Gate 2: Component Boundary Limits (Vertical Slicing)

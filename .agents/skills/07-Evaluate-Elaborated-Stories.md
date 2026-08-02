@@ -24,7 +24,7 @@ Run every drafted user story through these five gates. If a story fails any gate
 ### Gate 3: Valuable & Product-Agnostic
 
 * **Check:** Does the story provide inherent business or technical value without relying on legacy silos?
-* **Fail Condition:** The story explicitly names specific client segments, uses legacy platform names (e.g., AssetLink), or builds point-to-point hardcoded logic.
+* **Fail Condition:** The story explicitly names specific client segments, uses legacy platform names (e.g., reportgenerator), or builds point-to-point hardcoded logic.
 * **Action:** Rewrite the story statement and ACs to use universal parameters and actors (e.g., `System Consumer`, `Data Provider`).
 
 ### Gate 4: Architectural Integrity (Data Bridge Pattern)

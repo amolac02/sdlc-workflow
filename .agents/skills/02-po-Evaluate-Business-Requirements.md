@@ -12,7 +12,7 @@ For any submitted business requirement document, execute a review against the fo
 
 The platform and its agents serve the entire organization. Requirements must not be siloed.
 
-* **Fail Condition:** The text mentions specific client segments, references legacy application names (e.g., AssetLink), or contains logic exclusive to a single product line.
+* **Fail Condition:** The text mentions specific client segments, references legacy application names (e.g., reprotgenerator), or contains logic exclusive to a single product line.
 * **Action:** Flag for revision. Rewrite the requirement to abstract the rule so it applies universally to all relevant upstream and downstream consumers.
 
 ### Gate 2: Strategic Consolidation

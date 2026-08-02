@@ -11,7 +11,7 @@ When elaborating a user story, you must populate it with the following required 
 ### 1. The Story Statement
 
 * **Format:** `As a [Universal Persona], I need to [Action], so that [Value].`
-* **Agnostic Enforcement:** You must use universal actors (e.g., `System Consumer`, `Data Provider`). You are strictly forbidden from referencing legacy platforms (e.g., AssetLink) or specific client segments.
+* **Agnostic Enforcement:** You must use universal actors (e.g., `System Consumer`, `Data Provider`). You are strictly forbidden from referencing legacy platforms (e.g., reportgenerator) or specific client segments.
 
 ### 2. Technical Context & Traceability
 

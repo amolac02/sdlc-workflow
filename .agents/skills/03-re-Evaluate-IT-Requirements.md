@@ -15,7 +15,7 @@ For any submitted IT Specification document, execute a review against the follow
 
 ### Gate 2: Component Hierarchy Alignment
 * **Check:** All referenced components and sub-components must exist in `code-hierarchy.instructions.md`.
-* **Fail Condition:** Arbitrary component names, typos, or legacy names (e.g. AssetLink) not present in the code hierarchy.
+* **Fail Condition:** Arbitrary component names, typos, or legacy names (e.g. reportgenerator) not present in the code hierarchy.
 * **Action:** Correct the mapping to use exact component/sub-component names verbatim.
 
 ### Gate 3: Diagram Completeness & Syntax Check

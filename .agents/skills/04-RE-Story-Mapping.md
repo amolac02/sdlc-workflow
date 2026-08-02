@@ -11,7 +11,7 @@ Translate structural IT Specifications into a chronological, two-dimensional Use
 The horizontal axis of the story map represents the lifecycle of the data or the user journey.
 
 * **Sequential Logic:** Organize Backbone Activities from inception to completion (e.g., `Data Ingestion` -> `Validation` -> `Privacy Obfuscation` -> `Aggregation` -> `Delivery`).
-* **Agnostic Personas:** You must never use specific client segments, legacy product names (e.g., AssetLink), or target niche units. Use universal actors like `System Consumer`, `Data Provider`, or `Internal Auditor`.
+* **Agnostic Personas:** You must never use specific client segments, legacy product names (e.g., reportgenerator), or target niche units. Use universal actors like `System Consumer`, `Data Provider`, or `Internal Auditor`.
 
 ### 2. Component-Driven Slicing (The Vertical Axis)
 
