@@ -1,11 +1,14 @@
 # Skill: budget-pitch
 
+Sep 26, 2026 · @Amol
+
 ## Metadata
 
 | Field | Value |
 | --- | --- |
 | `name` | `budget-pitch` |
 | `version` | 0.3.0 |
+| `owner` | Amol (AssetLink PO) |
 | `role` | Produce an evidence-backed budget pitch for a brownfield, greenfield, or hybrid initiative. Every claim must cite a source; every number must trace to a document, a tool result, or an explicit `assumption` flag. Never state a figure as fact without a citation. |
 | `trigger` | Invoke when the request asks for: a budget pitch, investment case, funding ask, or business case — for a change to an existing system (brownfield), a new build (greenfield), or a mix (hybrid). Do not invoke for status reports or non-budget documents — route those elsewhere. |
 | `inputs` | `trigger_description` (string), `origin` (enum: `client_demand` \| `client_pain_point` \| `strategic_enhancement` \| `tech_upgrade`, resolved in Phase 1 if not given), `project_type` (enum: `brownfield` \| `greenfield` \| `hybrid`, resolved in Phase 1 if not given), `sponsor_hint` (string, optional), `decision_type` (enum: `full_approval` \| `phased_approval` \| `discovery_only`) |
@@ -17,7 +20,13 @@
 These rules govern how the skill acquires its raw material and apply regardless of `project_type`.
 
 1. **Input directory first.** Check `sdlc-artifacts/01-budget-pitch/input/` as the starting step. If the user hasn't placed material there yet (client interview transcripts, business demands, emails, reference material, or a manually written description), prompt them to do so before proceeding.
-2. **CID warning.** Every time the user is prompted to add input material, remind them explicitly: do NOT include Client Identifying Data (CID) in these files, for privacy compliance. This warning is not optional and is not a one-time notice — repeat it whenever new input is requested.
+2. **CID warning — use the fixed macro, never a paraphrase.** Every time the user is prompted to add input material — across every turn of a multi-turn conversation, not just the first — the runtime must render the exact `CID_WARNING` template below verbatim, not a reworded summary. This closes the gap where a rushed or shortened prompt accidentally drops the warning:
+
+   ```
+   CID_WARNING = "Reminder: please do not include any Client Identifying Data (CID) in these files — this is required for privacy compliance."
+   ```
+
+   This warning is not optional and is not a one-time notice. Any prompt asking the user to add, upload, or point to input material must append `CID_WARNING` unchanged, every time, regardless of how many times it has already been shown in the conversation.
 3. **Read and analyze** any files found in the input directory as the primary source for framing the pitch, before or alongside any sub-skill lookup calls.
 4. **Ask, don't guess, on gaps.** If reference files are missing or incomplete, ask the user what needs to be done and how the request could be fulfilled — never fabricate the missing context.
 5. **External web/market research is opt-in, not speculative.** Use a web-fetch style tool only for genuine external market/competitor research the user explicitly asks for, or that's clearly needed to size the value (this maps to the `market-research-lookup` sub-skill in Phase 2). If the user hasn't given a URL or named a source, ask rather than searching broadly.
@@ -42,6 +51,7 @@ This skill is orchestration + methodology only. It never estimates numbers or gu
 - A sub-skill returning `confidence` below the skill's configured threshold (default 0.6) must be surfaced in the pitch as `[assumption — needs review]`, never silently accepted as fact.
 - If two lookup calls (either `repo-source-lookup` or `market-research-lookup`) return contradicting facts, do not pick one — surface the conflict in Phase 2's output and flag for the human research checkpoint (see Human-in-the-loop gates).
 - `risk-assessor` always receives `project_type` so it can apply the right mandatory-risk-type rules (see Phase 6).
+- **Fallback protocol (applies to every sub-skill row above).** If a declared sub-skill is not present in the runtime, times out, or returns an error: do NOT assume, estimate, or invent the missing information, and do NOT fail the workflow silently. Instead, prompt the user directly for the specific information that sub-skill would have supplied — name which sub-skill failed and what it was trying to determine (e.g. "the cost-estimator tool isn't available — can you give me a rough cost range for \[line item\], or point me to a reference?"). Record the user's answer as `assumptions[]` with `confidence` set low (e.g. 0.4) and a `reason` noting it was manually supplied due to tool unavailability, not sourced from the repository/market research/estimator. This applies uniformly to `repo-source-lookup`, `market-research-lookup`, `client-metrics-lookup`, `cost-estimator`, `risk-assessor`, and `pitch-schema-validator`.
 
 ## Output schema
 
@@ -70,12 +80,13 @@ The skill's final output must validate against this shape before submission (che
   "cost_breakdown": {
     "low": "number", "high": "number", "currency": "string",
     "line_items": [{"category": "string", "phase": "string", "amount_low": "number", "amount_high": "number"}],
-    "contingency_pct": "number", "contingency_reason": "string"
+    "contingency_pct": "number", "contingency_reason": "string",
+    "spread_status": "expected_wide|needs_review|null", "spread_status_reason": "string|null"
   },
   "business_case": {"primary_drivers": ["revenue_protection|cost_avoidance|risk_reduction|efficiency_gain|new_revenue|market_entry"], "supporting_metrics": [{"metric_id": "string", "value": "number", "source_id": "string"}]},
   "risks": [{"type": "integration_regression|data_migration|client_disruption|market_risk|adoption_risk|technology_risk|vendor_lock_in|other", "likelihood": "low|medium|high", "impact": "string", "mitigation": "string"}],
   "delivery_plan": {"phases": [{"name": "string", "gate_criteria": "string"}], "success_metrics": ["string"]},
-  "journey_diagram_mermaid": "string (Mermaid graph TD syntax, descriptive node labels, clear start/end)",
+  "journey_diagram_mermaid": "string (Mermaid graph TD syntax; descriptive node labels; clear start/end; subgraph blocks allowed for large/hybrid architectures)",
   "ask": {"amount": "number", "currency": "string", "decision_needed_by": "date", "decision_type": "string"},
   "citations": [{"claim": "string", "source_id": "string"}],
   "assumptions": [{"field": "string", "reason": "string", "confidence": "number"}]
@@ -160,7 +171,7 @@ cost_breakdown = {
 1. Build `line_items` from the chosen option's scope, using the category set that matches `project_type` (brownfield adds migration/integration-rework/regression-testing; greenfield adds discovery-prototyping/infra-standup/vendor-licensing; hybrid includes both) × phase (discovery/design/build/test/hypercare) — pass to `cost-estimator`, never compute the range manually.
 2. Contingency default: brownfield 15% (“legacy unknowns”), greenfield 25% (“requirements/scope uncertainty — no existing system to anchor estimates against”), hybrid 20% blended. Always pass a non-zero `contingency_pct` and copy the tool's `assumptions[]` into `contingency_reason`.
 3. For brownfield/hybrid, explicitly pad test/UAT and hypercare line items. For greenfield, explicitly pad discovery/prototyping — that's where greenfield estimates are least reliable.
-4. If `cost-estimator` returns `low`/`high` with a spread wider than 2x, flag this range as high-uncertainty in `assumptions[]` for the Gate 2 review — do not narrow it yourself.
+4. If `cost-estimator` returns `a low/high spread wider than 2x, check whether it's expected: a >2x spread is standard and common for early-stage greenfield or complex hybrid work at the discovery phase, where technical complexity is still unknown. In that case, set cost_breakdown.spread_status = "expected_wide" with a one-line reason (e.g. "discovery-phase greenfield estimate — unproven technical approach") — this pre-acknowledges the spread so Gate 2 does not block on it alone. For any other case (brownfield past discovery, or a spread wider than 2x with no discovery-phase/complexity justification), set spread_status = "needs_review" and flag in assumptions[] for Gate 2. Do not narrow the range yourself either way`.
 
 ## Phase 5 — Business case
 
@@ -190,7 +201,7 @@ cost_breakdown = {
 2. If `uncited_claims` is non-empty, resolve each one: either attach a `source_id` (return to Phase 2/4/5 as needed) or move the claim into `assumptions[]`. Zero uncited claims is a hard requirement for submission.
 3. Render the human-facing document from the validated schema: one-page executive summary (trigger, cost\_of\_inaction, ask) plus a detailed appendix (everything else). Do not hand-write this narrative separately from the schema — generate it FROM the validated object so the two can never drift apart.
 4. Fill `ask.amount`, `ask.decision_needed_by`, `ask.decision_type` as the final, unambiguous line of the summary.
-5. **Visual journey mapping (required Section 4).** The rendered appendix must include a high-level customer/system journey as a Mermaid flowchart (`graph TD` syntax), populated from `journey_diagram_mermaid` in the output schema. It must have a clear start/end flow and descriptive node labels — this is a mandatory section for every pitch, brownfield or greenfield, not an optional visual.
+5. **Visual journey mapping (required Section 4, subgraphs allowed).** The rendered appendix must include a high-level customer/system journey as a Mermaid flowchart (`graph TD` syntax), populated from `journey_diagram_mermaid` in the output schema. It must have a clear start/end flow and descriptive node labels. For large hybrid architectures where a single flat graph TD would become cluttered, group related steps into Mermaid subgraph blocks (one per system, phase, or actor) rather than flattening everything into one top-level flow — this keeps the diagram readable without dropping detail. This diagram is a mandatory section for every pitch, brownfield or greenfield, not an optional visual.
 
 ## Human-in-the-loop gates
 
@@ -199,7 +210,7 @@ These are hard stops — the orchestrator must not proceed past a gate without e
 | Gate | After phase | Reviewer sees | Cannot proceed if |
 | --- | --- | --- | --- |
 | Gate 1 — Research review | Phase 2 | `sources_reviewed`, `conflicts_flagged`, any low-confidence facts | Any `conflicts_flagged` entry is unresolved, or `audience.priority` is still null |
-| Gate 2 — Costing review | Phase 4 | `cost_breakdown`, `contingency_reason`, high-uncertainty flag | The low/high spread exceeds 2x and has not been explicitly acknowledged by the reviewer |
+| Gate 2 — Costing review | Phase 4 | `cost_breakdown`, `contingency_reason`, `spread_status` | `spread_status = "needs_review"` and unacknowledged. A `spread_status = "expected_wide"` entry (discovery-phase greenfield/complex hybrid) does NOT block the gate — the reviewer sees the reason and can proceed without extra friction, though they may still choose to comment |
 | Gate 3 — Final sign-off | Phase 7 | Full rendered pitch + validator result | `pitch-schema-validator` returns `valid: false`, or `uncited_claims` is non-empty |
 
 Each gate approval is logged with reviewer identity and timestamp alongside the pitch object, so the audit trail shows who approved what, and when.
@@ -214,7 +225,7 @@ Each gate approval is logged with reviewer identity and timestamp alongside the 
 - **Logging** — every sub-skill call (inputs, raw output, confidence) is retained alongside the final pitch for audit, even where the final narrative only summarizes it.
 - **Versioning** — a change to the output schema or a phase's tool-call sequence requires a version bump (`metadata.version`) and a re-run against the skill's eval set before deployment.
 - \- \*\*Project-type-aware validation\*\* — \`pitch-schema-validator\` checks that the \`risks\[\]\` array contains every mandatory type for the declared \`project\_type\` (see Phase 6) and that each \`options\[\]\` entry carries the field set required for its type (see Output schema). A brownfield pitch missing \`data\_migration\`, or a greenfield pitch missing \`market\_risk\`, fails validation; a brownfield pitch is never required to have \`market\_risk\`, and vice versa.
-- **CID/privacy compliance** — no Client Identifying Data may enter the pitch or any intermediate artifact from user-supplied input material; the CID warning to the user (Input handling & compliance) is repeated on every prompt for new input, not stated once and forgotten.
+- **CID/privacy compliance** — no Client Identifying Data may enter the pitch or any intermediate artifact from user-supplied input material; the exact CID\_WARNING macro (Input handling & compliance) is appended verbatim on every prompt for new input, across every turn of a multi-turn conversation — never paraphrased, shortened, or stated once and dropped thereafter.
 - **No codebase scanning** — `repo-source-lookup` and any input-file reading are scoped to documentation and business artifacts only; this skill never reads source code, regardless of `project_type`.
 - **Value over features in rendering** — `pitch-schema-validator` (or a rendering-stage check) rejects a Phase 7 narrative that lists a feature/capability with no tie-back to a `business_case.primary_drivers` entry.
 - **Mandatory visual** — submission is blocked if `journey_diagram_mermaid` is empty or is not valid `graph TD` Mermaid syntax.
